@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Design Space Explorer</title>
+        <script src="./lib/d3.v3.js"></script>
+        <script src="./lib/kung.js"></script>
+        <style>
+
+div {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+.grid {
+    min-width : 1200px;
+}
+
+.col-dims {
+    float : right;
+    width : 600px;
+}
+
+.text-col {
+    float : left;
+    width : 190px;
+    height : 700px;
+    margin: 5px;
+    /*background-color: white;*/
+}
+
+.button-col {
+    float : left;
+    width : 190px;
+    margin: 5px;
+    /*background-color: white;*/
+}
+
+.split {
+    height: 50%;
+}
+
+.title {
+    padding-bottom: 5px;
+}
+
+.options {
+    height: 300px ;
+    overflow-y: auto ;
+    overflow-x: hidden ;
+    border-top-width: 1px ;
+    border-top-color: black;
+    border-top-style: solid;
+}
+
+.chosen {
+    height: 675px ;
+    overflow-y: auto ;
+    overflow-x: hidden ;
+    border-top-width: 1px ;
+    border-top-color: black;
+    border-top-style: solid;
+}
+
+p.option{
+    margin-top: 5px;
+    margin-bottom: 5px;
+    cursor: pointer; 
+    cursor: hand; 
+}
+
+p.option:hover { 
+    background-color: lightgrey;
+}
+
+p.button {
+    text-align: center;
+    margin: 2px;
+}
+
+button {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.grid:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.col-chart {
+    margin-right : 600px;
+}
+
+rect {
+    fill: transparent;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.1);
+  stroke-width: 1px;
+  shape-rendering: crispEdges;
+}
+
+.axisLine {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 2px;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+    fill-opacity: .6;
+    stroke-width: 0px;
+    stroke: black;
+}
+
+.dot:hover{
+    cursor: crosshair; 
+}
+
+.box {
+    fill-opacity: 0;
+    stroke-width: 1px;
+    /*stroke: black;*/
+}
+
+.box:hover{
+    cursor: crosshair; 
+}
+
+div.tooltip{
+    opacity: .8;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid black;
+    background: white;
+    visibility: hidden;
+    position: absolute;
+    z-index: 10;
+    margin: 0px;
+}
+
+#tooltip_title{
+    margin: 5px;
+    font-size: 18px;
+}
+
+        </style>
+    </head>
+    <body>
+        <div class="tooltip"></div>
+        <div class="grid">
+            <div class="col-dims">
+                <div class="text-col">
+                    <div class="split">
+                        <div class="title">X-axis</div>
+                        <div class="options" id="list-xaxis"></div>
+                    </div>
+                    <div class="split">
+                        <div class="title">Size</div>
+                        <div class="options" id="list-radius"></div>
+                    </div>
+                </div>
+                <div class="text-col">
+                    <div class="split">
+                        <div class="title">Y-axis</div>
+                        <div class="options" id="list-yaxis"></div>
+                    </div>
+                    <div class="split">
+                        <div class="title">Color</div>
+                        <div class="options" id="list-color"></div>
+                    </div>
+                </div>
+                <div class="text-col">
+                    <div class="title">Selected designs</div>
+                    <div class="chosen" id="list-chosen">
+                    </div>
+                </div>
+            </div>
+            <div class="col-chart", id="chart"></div>
+        </div>
+        <div class="grid">
+            <div class="col-dims">
+                <div class="button-col"><p class="button"><button id="button-resetRadius" type="button">Reset</button></p></div>
+                <div class="button-col"><p class="button"><button id="button-resetColor" type="button">Reset</button></p></div>
+                <div class="button-col"><p class="button">
+                    <button id="button-resetChosen" type="button">Reset</button>
+                    <button id="button-exportChosen" type="button" disabled>Export</button>
+                </p></div>
+            </div>
+            <div class="col-chart", id="chart"><p class="button">
+                <button id="button-reloadData" type="button" disabled>Reload data</button>
+                <button id="button-isolateOptimal" type="button">Isolate optimal designs</button>
+                <button id="button-isolateSelected" type="button">Isolate selected designs</button>
+                <button id="button-resetZoom" type="button">Reset zoom</button>
+            </p></div>
+        </div>
+    </body>
+</html>
+
+<script>
+
+var chartDiv = document.getElementById("chart");
+
+// Variables
+var svgWidth  = chartDiv.clientWidth,
+    svgHeight = 700,
+    margin = {"top": 10, "right": 15, "bottom": 25, "left": 50},
+    width  = svgWidth - margin.left - margin.right,       
+    height = svgHeight - margin.top  - margin.bottom;
+
+// SVG Viewport
+var svgViewport = d3.select(".col-chart")
+    .append("svg")
+    .attr("id", "scatter")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+
+// Scales
+var xAxisScale = d3.scale.linear()
+    .range([0, width]).nice();
+
+var yAxisScale = d3.scale.linear()
+    .range([height, 0]).nice();
+
+var radiusScale = d3.scale.linear()
+    .range([4, 12]);
+
+var colorScale = d3.scale.linear()
+    .range([240, 0]);
+
+var baseSize = 5;
+
+var selected = [];
+var boolIsolateSelected = false;
+var boolIsolateOptimal = false;
+
+//TOOLTIP
+var tooltip = d3.select(".tooltip");
+var tooltip_title = tooltip.append("p").attr("id", "tooltip_title");
+
+targetWidth = 190;
+
+//timeout if no screenshot images found
+// setTimeout(function() {
+    // runAll(false);
+// }, 2000);
+
+//load example image to get tooltip size, wait until load to run rest of code
+var imgUrl = './images/0.png';
+var img = new Image();
+img.onload = function () {
+    runAll(true);
+}
+img.onerror = function(){
+    runAll(false);
+}
+img.src = imgUrl;
+
+function groupBy(arr, property) {
+  return arr.reduce(function(memo, x) {
+    if (!memo[x[property]]) { memo[x[property]] = []; }
+    memo[x[property]].push(x);
+    return memo;
+  }, {});
+}
+
+// convert series as binary to continuous equivalent for visualization
+function processBinary(str, header) {
+    seq = JSON.parse(str);
+    value = 0
+
+    sub = header.substring(4);
+    depth = Number(sub.substring(0, sub.indexOf(']')));
+    
+    for (var i = 0; i < seq.length; i++) {
+        value += seq[i] * Math.pow(depth, i);
+    }
+
+    return value;
+}
+
+// convert sequences as permutation to continuous equivalent for visualization
+function processPermutation(str, header) {
+    
+    permutation = JSON.parse(str);
+
+    var n = permutation.length;
+
+    var pos = [];
+    var elems = [];
+
+    var k = 0;
+    var m = 1;
+
+    for (var i = 0; i < n; i++) {
+        pos.push(i);
+        elems.push(i);
+    }
+
+    for (var i = 0; i < n-1; i++) {
+        k += m * pos[permutation[i]];
+        m = m * (n-i);
+        pos[elems[n-i-1]] = pos[permutation[i]];
+        elems[pos[permutation[i]]] = elems[n-i-1];
+    }
+
+    return k;
+}
+
+function runAll(imageTooltip) {
+
+    if (imageTooltip){
+        img_width = targetWidth;
+        img_height = img.height / (img.width / targetWidth);
+
+        var tooltip_image = tooltip.append("svg")
+            .attr("width", img_width)
+            .attr("height", img_height)
+            .append("svg:image")
+            .attr('x',0)
+            .attr('y',0)
+            .attr('width', img_width)
+            .attr('height', img_height);
+    }else{
+        img_width = targetWidth;
+        img_height = 0;
+    }
+
+    // Get the data
+    d3.tsv("./results.tsv", function(error, data) {
+
+        data = data.filter(function(d){
+            bool = true;
+            for (var key in d) {
+                if (d[key] == "" || d[key] == null){
+                    bool = false;
+                    break;
+                }
+            }
+            return bool;
+        });
+
+        var allKeys = Object.keys(data[0]);
+
+        console.log(allKeys);
+
+        // search for 'series' or 'sequence' type variables
+        var listKeys = []
+        for (var i = 0; i < allKeys.length; i++) {
+            if (allKeys[i].indexOf("[ser") !== -1 || allKeys[i].indexOf("[seq") !== -1){
+                listKeys.push(allKeys[i]);
+            }
+        }
+
+        // convert to integer equivalent
+        for (var i = 0; i < listKeys.length; i++) {
+            for (var j = 0; j < data.length; j++) {
+                if (listKeys[i].indexOf("[ser") == 0) {
+                    data[j][listKeys[i]] = processBinary(data[j][listKeys[i]], listKeys[i]);
+                }
+                else if (listKeys[i].indexOf("[seq") == 0) {
+                    data[j][listKeys[i]] = processPermutation(data[j][listKeys[i]], listKeys[i]);
+                }
+            }
+        }
+
+        // check if constraints are being used
+        if (allKeys.indexOf("feasible") !== -1){
+            dataSplit = groupBy(data, "feasible");
+        }else{
+            var dataSplit = {
+                False: [],
+                True: data
+            };
+        };
+
+        if (dataSplit.True !== undefined){
+            var domKeys = allKeys.filter(function(key){ 
+                return key.indexOf("[min]") !== -1 || key.indexOf("[max]") !== -1 
+            }).concat(["id"]);
+
+            var domData = dataSplit.True.map(function(obj) {
+                newObj = {};
+                domKeys.map(function(key) {
+                    newObj[key] = obj[key]
+                })
+                return newObj;
+            });
+
+            dominant = getDominantSet(domData);
+
+            var ids = []
+            dominant.map(function(obj) {
+                ids.push(obj["id"]);
+            });
+
+            data.map(function(obj){
+                if (ids.indexOf(obj["id"]) > -1){
+                    obj["dominant"] = true;
+                }else{
+                    obj["dominant"] = false;
+                }
+            });
+        }else{
+            data.map(function(obj){
+                obj["dominant"] = false;
+            });
+            dataSplit.True = [];
+        }
+
+        var headerNames = allKeys.filter(function(key){ return key.indexOf("[in]") !== -1 || key.indexOf("[ser") !== -1 || key.indexOf("[seq") !== -1 || key.indexOf("[min]") !== -1 || key.indexOf("[max]") !== -1 || key.indexOf("generation") !== -1 || key.indexOf("id") !== -1 });
+
+        var xCat = headerNames[headerNames.length-2],
+            yCat = headerNames[headerNames.length-1];
+            rCat = headerNames[0];
+            colorCat = headerNames[1];
+
+        opt_xaxis = d3.select("#list-xaxis").selectAll("p")
+            .data(headerNames)
+            .enter()
+            .append("p")
+            .attr("class", "option")
+            .on("click", function(d, i) {
+                xCat = d;
+                update();
+            })
+            .text(function(d) { return d; });
+
+        opt_yaxis = d3.select("#list-yaxis").selectAll("p")
+            .data(headerNames)
+            .enter()
+            .append("p")
+            .attr("class", "option")
+            .text(function(d) { return d; })
+            .on("click", function(d) {
+                yCat = d;
+                update();
+            });
+
+        opt_radius = d3.select("#list-radius").selectAll("p")
+            .data(headerNames)
+            .enter()
+            .append("p")
+            .attr("class", "option")
+            .text(function(d) { return d; })
+            .on("click", function(d) {
+                rCat = d;
+                updateDims();
+                updateCircleStyle();
+                updateBoxStyle();
+            });
+
+        opt_color = d3.select("#list-color").selectAll("p")
+            .data(headerNames)
+            .enter()
+            .append("p")
+            .attr("class", "option")
+            .text(function(d) { return d; })
+            .on("click", function(d) {
+                colorCat = d;
+                updateDims();
+                updateCircleStyle();
+                updateBoxStyle();
+            });
+
+        // Axis Functions
+        var xAxis = d3.svg.axis()
+            .scale(xAxisScale)
+            .orient("bottom")
+            .tickSize(-height)
+            .ticks(5);
+
+        var yAxis = d3.svg.axis()
+            .scale(yAxisScale)
+            .orient("left")
+            .tickSize(-width)
+            .ticks(5);
+
+        // Zoom Function
+        var zoom = d3.behavior.zoom()
+            .x(xAxisScale)
+            .y(yAxisScale)
+            .scaleExtent([1.0, 15.0])
+            .on("zoom", zoomFunctionXY);
+
+        var zoomX = d3.behavior.zoom()
+            .x(xAxisScale)
+            .scaleExtent([0.2, 30.0])
+            .on("zoom", zoomFunctionX);
+
+        var zoomY = d3.behavior.zoom()
+            .y(yAxisScale)
+            .scaleExtent([0.2, 30.0])
+            .on("zoom", zoomFunctionY);
+
+        // Inner Drawing Space
+        var innerSpace = svgViewport.append("g")
+            .attr("class", "inner_space")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Draw Axis
+        innerSpace.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis)
+            // .append("text")
+            //   .classed("label", true)
+            //   .attr("x", width)
+            //   .attr("y", margin.bottom - 10)
+            //   .style("text-anchor", "end")
+            //   .text("x label");
+
+        innerSpace.append("g")
+            .attr("class", "y axis")
+            .call(yAxis)
+            .append("text")
+              // .classed("label", true)
+              // .attr("transform", "rotate(-90)")
+              // .attr("y", -margin.left)
+              // .attr("dy", ".71em")
+              // .style("text-anchor", "end")
+              // .text("y label");
+
+        innerSpace.append("rect")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("id", "rect-middle")
+            .call(zoom)
+            .on("dblclick.zoom", null);
+
+        innerSpace.append("rect")
+            .attr("width", margin.left)
+            .attr("height", height)
+            .attr("id", "rect-left")
+            .attr("transform", "translate(-" + margin.left + ",0)")
+            .call(zoomY)
+            .on("dblclick.zoom", null);
+
+        innerSpace.append("rect")
+            .attr("width", width)
+            .attr("height", margin.bottom)
+            .attr("id", "rect-bottom")
+            .attr("transform", "translate(0, " + height + ")")
+            .call(zoomX)
+            .on("dblclick.zoom", null);
+
+        var objects = innerSpace.append("svg")
+            .classed("objects", true)
+            .attr("width", width)
+            .attr("height", height);
+
+         var xLine = objects.append("svg:line")
+            .classed("axisLine hAxisLine", true)
+            .attr("x1", 0)
+            .attr("y1", yAxisScale(0))
+            .attr("x2", width)
+            .attr("y2", yAxisScale(0));
+
+        var yLine = objects.append("svg:line")
+            .classed("axisLine vAxisLine", true)
+            .attr("x1", xAxisScale(0))
+            .attr("y1", 0)
+            .attr("x2", xAxisScale(0))
+            .attr("y2", height);
+
+        function updateTooltip(d){
+            if (!boolIsolateSelected || selected.indexOf(d["id"]) > -1){
+
+                if (imageTooltip){
+                    var url = "./images/" + d["id"] + ".png";
+                    tooltip_image.attr("xlink:href", url);
+                    offX = img_width + 40;
+                    offY = img_height + 80;
+                }else{
+                    offX = 135;
+                    offY = 75;
+                }
+
+                mouseX = d3.event.pageX;
+                mouseY = d3.event.pageY;
+
+                tooltip.style("left", function(){
+                    if (mouseX < offX){
+                        return xAxisScale(d[xCat]) + margin.left + 20 + "px";
+                    }else{
+                        return xAxisScale(d[xCat]) + margin.left + 20 - offX + "px";
+                    }
+                    
+                });
+
+                tooltip.style("top", function(){
+                    if (mouseY < offY){
+                        return yAxisScale(d[yCat]) + margin.top + 20 + "px";
+                    }else{
+                        return yAxisScale(d[yCat]) + margin.top + 20 - offY + "px";
+                    }
+                    
+                });
+
+                tooltip_title.text("Design #" + d["id"]);
+                tooltip.style("visibility", "visible");
+            };
+        };
+
+        var box = objects.selectAll("box")
+            .data(dataSplit.False)
+            .enter().append("rect")
+            .classed("box", true)
+            .attr("width", baseSize)
+            .attr("height", baseSize)
+            .on("mouseover", function(d){
+                updateTooltip(d);
+            })
+            .on("mouseout", function(){
+                tooltip.style("visibility", "hidden");
+            })
+            .call(zoom)
+            ;
+
+        var circle = objects.selectAll("dot")
+            .data(dataSplit.True)
+            .enter().append("circle")
+            .classed("dot", true)
+            .attr("r", 2)
+            .on("click", function(d) {
+                selectDesign(d["id"]);
+            })
+            .on("mouseover", function(d){
+                updateTooltip(d);
+            })
+            .on("mouseout", function(){
+                tooltip.style("visibility", "hidden");
+            })
+            .call(zoom)
+            ;
+
+        update();
+
+        function zoomUpdate(){
+            // Redraw the Axis
+            innerSpace.select(".x.axis").call(xAxis);
+            innerSpace.select(".y.axis").call(yAxis);
+
+            xLine.attr("y1", yAxisScale(0)).attr("y2", yAxisScale(0));
+            yLine.attr("x1", xAxisScale(0)).attr("x2", xAxisScale(0));
+
+            // Select All Circles
+            d3.select("#scatter").selectAll(".dot")
+                .attr("cx", function(d, i) { return xAxisScale(d[xCat]); })
+                .attr("cy", function(d, i) { return yAxisScale(d[yCat]); })
+
+            // Select All boxes
+            d3.select("#scatter").selectAll(".box")
+                .attr("x", function(d, i) { return xAxisScale(d[xCat]) - baseSize/2; })
+                .attr("y", function(d, i) { return yAxisScale(d[yCat]) - baseSize/2; })
+        }
+
+        // Zoom Function Event Listeners
+        function zoomFunctionXY() {
+
+            zoomY.y(yAxisScale);   
+            // innerSpace.select("rect-bottom").call(zoomY);
+            zoomX.x(xAxisScale);   
+            // innerSpace.select("rect-left").call(zoomX);
+
+            zoomUpdate();
+            
+        };
+        function zoomFunctionY() {
+
+            zoom.x(xAxisScale).y(yAxisScale);   
+            // innerSpace.select("rect-middle").call(zoom);
+            zoomX.x(xAxisScale);   
+            // innerSpace.select("rect-left").call(zoomX);
+
+            zoomUpdate();
+            
+        };
+        function zoomFunctionX() {
+
+            zoom.x(xAxisScale).y(yAxisScale);   
+            // innerSpace.select("rect-middle").call(zoom);
+            zoomY.y(yAxisScale);   
+            // innerSpace.select("rect-bottom").call(zoomY);
+
+            zoomUpdate();
+            
+        };
+
+        d3.select("#button-resetZoom").on("click", function() {
+            update();
+        });
+        d3.select("#button-resetRadius").on("click", function() {
+            resetDim("radius");
+        });
+        d3.select("#button-resetColor").on("click", function() {
+            resetDim("color");
+        });
+        d3.select("#button-resetChosen").on("click", function() {
+            clearDesigns();
+        });
+        d3.select("#button-isolateSelected").on("click", function() {
+            isolateSelected();
+        });
+        d3.select("#button-isolateOptimal").on("click", function() {
+            isolateOptimal();
+        });
+        d3.select("#button-reloadData").on("click", function() {
+            reloadData();
+        });
+
+        function resetDim(type){
+            if (type == "radius"){
+                rCat = null;
+            }else if(type == "color"){
+                colorCat = null;
+            };
+            updateDims();
+            updateCircleStyle();
+            updateBoxStyle();
+        };
+
+        function selectDesign(id) {
+            indx = selected.indexOf(id);
+            if ( indx > -1) {
+                selected.splice(indx, 1);
+            }else{
+                selected.push(id);
+            }
+            updateSelectedList();
+            updateCircleStyle();
+        };
+
+        function clearDesigns() {
+            selected = [];
+            updateSelectedList();
+            updateCircleStyle();
+        };
+
+        function updateSelectedList() {
+            var sel = d3.select("#list-chosen").selectAll("div")
+                .data(selected);
+
+            sel.exit()
+                .remove();
+
+            var newItems = sel.enter().append("div");
+
+            if (imageTooltip){
+                newItems
+                    .append("svg")
+                    .attr('width', img_width)
+                    .attr('height', img_height)
+                    .append("svg:image")
+                    .attr('x',0)
+                    .attr('y',0)
+                    .attr('width', img_width)
+                    .attr('height', img_height)
+                    // .attr("xlink:href", function(d){
+                        // return "./images/" + d + ".png";
+                    // })
+                ;
+
+                sel.select("image")
+                    .attr("xlink:href", function(d){
+                        return "./images/" + d + ".png";
+                    })
+                ;
+            }
+
+            newItems
+                .append("p")
+                .attr("class", "option")
+                // .text(function(d) { return d; })
+            ;
+
+            sel.select("p")
+                .text(function(d) { return "Design #" + d; })
+            ;
+        };
+
+        function isolateOptimal() {
+            boolIsolateOptimal = !boolIsolateOptimal;
+            boolIsolateSelected = false;
+            updateCircleStyle();
+            updateBoxStyle();
+        };
+
+        function isolateSelected() {
+            boolIsolateSelected = !boolIsolateSelected;
+            boolIsolateOptimal = false;
+            updateCircleStyle();
+            updateBoxStyle();
+        };
+
+        function reloadData() {
+            console.log("not yet implemented")
+        };
+
+        function update() {
+
+            updateDims();
+
+            zoom.x(xAxisScale).y(yAxisScale);
+            zoomX.x(xAxisScale);
+            zoomY.y(yAxisScale);
+
+            var svg = d3.select("#scatter").transition();
+            xLine.transition();
+            yLine.transition();
+
+            // Redraw the Axis
+            innerSpace.select(".x.axis").transition().call(xAxis);
+            innerSpace.select(".y.axis").transition().call(yAxis);
+
+            xLine.attr("y1", yAxisScale(0)).attr("y2", yAxisScale(0));
+            yLine.attr("x1", xAxisScale(0)).attr("x2", xAxisScale(0));
+
+            updateCirclePos();
+            updateCircleStyle();
+            updateBoxPos();
+            updateBoxStyle();
+
+        };
+
+        function updateDims(){
+            opt_xaxis.style("background-color", function(d){ if(d == xCat){ return "darkgrey"; } });
+            opt_yaxis.style("background-color", function(d){ if(d == yCat){ return "darkgrey"; } });
+            opt_radius.style("background-color", function(d){ if(d == rCat){ return "darkgrey"; } });
+            opt_color.style("background-color", function(d){ if(d == colorCat){ return "darkgrey"; } });
+
+            var xMin = d3.min(data, function(d) { return +d[xCat]; });
+            var xMax = d3.max(data, function(d) { return +d[xCat]; });
+            var xOff = (xMax - xMin) * .04;
+
+            var yMin = d3.min(data, function(d) { return +d[yCat]; });
+            var yMax = d3.max(data, function(d) { return +d[yCat]; });
+            var yOff = (yMax - yMin) * .04;
+
+            var rMin = d3.min(data, function(d) { return +d[rCat]; });
+            var rMax = d3.max(data, function(d) { return +d[rCat]; });
+
+            var cMin = d3.min(data, function(d) { return +d[colorCat]; });
+            var cMax = d3.max(data, function(d) { return +d[colorCat]; });
+
+            xAxisScale.domain([xMin - xOff, xMax + xOff]);
+            yAxisScale.domain([yMin - yOff, yMax + yOff]);
+            radiusScale.domain([rMin, rMax]);
+            colorScale.domain([cMin, cMax]);
+        }
+
+        function updateCirclePos(){
+          
+            // Select All Circles
+            d3.select("#scatter").selectAll(".dot")
+                .transition()
+                .attr("cx", function(d, i) { return xAxisScale(d[xCat]); })
+                .attr("cy", function(d, i) { return yAxisScale(d[yCat]); })
+
+        };
+
+        function updateCircleStyle(){
+
+            // Select All Circles
+            d3.select("#scatter").selectAll("circle")
+                .attr("r", function(d) {
+                    if (rCat === null){
+                        return 4;
+                    }else{
+                        return radiusScale(d[rCat]); 
+                    }
+                })
+                .style("fill-opacity", function(d) {
+                    indx = selected.indexOf(d["id"]);
+                    if (boolIsolateSelected) {
+                        if (indx > -1) {
+                            return 0.6;
+                        }else{
+                            return 0.02;
+                        };
+                    }else if(boolIsolateOptimal){
+                        if (d["dominant"] || indx > -1) {
+                            return 0.6;
+                        }else{
+                            return 0.02;
+                        };
+                    }else{
+                        return 0.6
+                    };
+                })
+                .style("fill", function(d) { 
+                    if (colorCat === null){
+                        return "darkgrey";
+                    }else{
+                        return d3.hsl(colorScale(d[colorCat]), 1.0, 0.475);
+                    }
+                })
+                .style("stroke-width", function(d) {
+                    indx = selected.indexOf(d["id"]);
+                    if (indx > -1) {
+                        return 2;
+                    }else{
+                        return 0;
+                    };
+                });
+
+        };
+
+        function updateBoxPos(){
+            // Select All Boxes
+            d3.select("#scatter").selectAll(".box")
+                .transition()
+                .attr("x", function(d, i) { return xAxisScale(d[xCat]) - baseSize/2; })
+                .attr("y", function(d, i) { return yAxisScale(d[yCat]) - baseSize/2; })
+        };
+
+        function updateBoxStyle(){
+            // Select All Boxes
+            d3.select("#scatter").selectAll(".box")
+                .style("stroke", function(d) { 
+                    if (colorCat === null){
+                        return "darkgrey";
+                    }else{
+                        return d3.hsl(colorScale(d[colorCat]), 1.0, 0.475);
+                    }
+                })
+                .style("opacity", function(d) {
+                    if(boolIsolateOptimal || boolIsolateSelected){
+                        return 0.1
+                    }else{
+                        return 1.0
+                    };
+                })
+        };
+
+    });
+
+};
+
+</script>
