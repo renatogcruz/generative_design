@@ -51,11 +51,23 @@ The architectural design is composed of innumerable variables, some of them cont
 
 ### Implementation, experiments and applying the generative algorithm - the evolutionary solver [Discover](https://github.com/danilnagy/discover_legacy)
 
+![](figures/readme_3.jpg)
+
 ![](figures/GA.gif)
 
-### Analysis of results
+### Analysis 
 
-![](figures/readme_3.jpg)
+![](figures/readme_4.jpg)
+
+![](figures/readme_5.jpg)
+
+![](figures/readme_6.jpg)
+
+![](figures/readme_7.jpg)
+
+### Results
+
+![](figures/readme_8.jpg)
 
 ### Suggestions for future work
 
