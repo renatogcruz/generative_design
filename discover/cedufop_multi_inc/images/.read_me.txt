@@ -1,1 +1,3 @@
-To prevent github from truncating this directory to 1,000 files, I decided to compress them and preserve the 4,901 project alternatives obtained in this step of optimization. If you wish to analyze all of these images, use the 7.Zip application to unzip the "images.7z" file or similar application of your choice.
+To prevent github from truncating this directory to a smaller number of files than it actually has, I decided to keep all 4,901 images obtained in this optimization step preserved in external file to this directory. You can access this file through the link below:
+
+https://drive.google.com/drive/folders/1PbDaJGOzT42c4wt3ccV83byx6sMTBOG0?usp=sharing
