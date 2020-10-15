@@ -88,3 +88,5 @@ Click [here](https://github.com/renatogcruz/generative_design/blob/master/append
 ### Works derived from this research
 
 Nov, 2018 [Generative design in the design development of metallic constructions](http://www.proceedings.blucher.com.br/article-details/29707). Published in the XXII International Congress of the Ibero-American Society of Digital Graphics.
+
+
