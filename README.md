@@ -1,3 +1,6 @@
+[![Open Source? Yes!](https://badgen.net/badge/Open%20Source%20%3F/Yes%21/blue?icon=github)](https://github.com/Arquitetura-Aberta/info)
+[![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
+
 # generative_design_mecom
 Generative design in the design development of metallic constructions
 
@@ -85,8 +88,10 @@ The main suggestions for future work are the following suggestions:
 
 Click [here](https://github.com/renatogcruz/generative_design/blob/master/appendx.py).
 
-### Works derived from this research
+### Research articles
 
-Nov, 2018 [Generative design in the design development of metallic constructions](http://www.proceedings.blucher.com.br/article-details/29707). Published in the XXII International Congress of the Ibero-American Society of Digital Graphics.
+[![DOI: 10.5151/sigradi2018-1631](https://zenodo.org/badge/DOI/10.5151/sigradi2018-1631.svg)](https://www.proceedings.blucher.com.br/article-details/29707) [Generative design in the design development of metallic constructions](http://www.proceedings.blucher.com.br/article-details/29707). Nov, 2018
+
+Published in the XXII International Congress of the Ibero-American Society of Digital Graphics.
 
 
