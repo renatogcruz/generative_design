@@ -95,3 +95,8 @@ Click [here](https://github.com/renatogcruz/generative_design/blob/master/append
 Published in the XXII International Congress of the Ibero-American Society of Digital Graphics.
 
 
+[![http://dx.doi.org/10.1590/s1678-86212021000400569](https://zenodo.org/badge/DOI/10.1590/s1678-86212021000400569.svg)][Generative design: information flow between genetic algorithm and parametric design in a steel structure construction](https://www.scielo.br/j/ac/a/f5dkBmGvDYV8hDNgxHRXxYz/abstract/?format=html&lang=en). Out./Dec. 2021
+
+Published in Associação Nacional de Tecnologia do Ambiente Construído, ISSN 1678-8621, Porto Alegre, v. 21, n. 4, p. 271-289.
+
+
